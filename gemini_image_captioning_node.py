@@ -17,7 +17,7 @@ class GeminiImageCaptioning:
             "required": {
                 "IMAGE": ("IMAGE",),
                 "PROMPT TYPE": (["SD1.5 – SDXL", "FLUX"], {"default": "SD1.5 – SDXL"}),
-                "GEMINI MODEL": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.0-flash-preview", "gemini-3.0-pro-preview"], {"default": "gemini-3.0-flash-preview"}),
+                "GEMINI MODEL": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview", "gemini-3-pro-preview"], {"default": "gemini-3-flash-preview"}),
                 "API KEY PATH": ("STRING", {"default": "", "multiline": False}),
             },
             "optional": {
@@ -40,8 +40,8 @@ class GeminiImageCaptioning:
     PRICING = {
         "gemini-2.5-flash": (0.30, 2.50),
         "gemini-2.5-pro": (1.25, 10.00),
-        "gemini-3.0-flash-preview": (0.50, 3.00), # Preview pricing
-        "gemini-3.0-pro-preview": (2.00, 12.00),   # Preview pricing
+        "gemini-3-flash-preview": (0.50, 3.00), # Preview pricing
+        "gemini-3-pro-preview": (2.00, 12.00),   # Preview pricing
     }
 
     def gen_caption(self, IMAGE, **kwargs):
@@ -98,41 +98,32 @@ class GeminiImageCaptioning:
 
         # 3. Construct Prompt
         prompt_parts = []
-
-        # Block 1: Base Instruction
-        prompt_parts.append("Give me a description of this image in the format of a text prompt for AI generative model. It should be only the descriptive text according to the provided template, without any additional comments from you. The text should be continuous, without headings, lists, or any other formatting.")
-
-        # Block 2: Style Reference
-        prompt_parts.append("Use the following reference as an example of the prompt format and structure, showing how the text should look. Use it only as a reference, do not use its content for the current request unless it is present in the attached image.")
         
+        # Base Instruction
         if prompt_type == "SD1.5 – SDXL":
-            prompt_parts.append('"It should be in CLIP-L comma-separated keywords SDXL prompt style. This is the sample, don’t use it directly only like a style reference: "Architecture, high-end modernist residential complex, minimalist design, open balconies, subtle architectural details, concrete and glass façades, elegant geometric volumes, tiered rooftop terraces, panoramic floor-to-ceiling windows, neutral-toned stone panels, tinted glass curtain walls, brushed metal railings, integrated with lush landscaping, manicured hedges, ornamental grasses, sculptural trees, wooden pathway leading to a reflective metal sphere, secluded urban oasis, tranquil environment, free from city noise, surrounded by curated greenery, creating a serene and balanced atmosphere, soft diffused lighting, overcast sky, early morning mist, gentle atmospheric glow, cinematic wide-angle perspective, symmetrical framing, high dynamic range, RAW photo, hyper-detailed, photorealistic""')
-        elif prompt_type == "FLUX":
-            prompt_parts.append('"It should be in CLIP-G natural language FLUX prompt style. This is the sample, don’t use it directly only like a style reference: "Architecture, high-end modernist residential complex surrounded by lush greenery, designed with a minimalist and elegant aesthetic. The buildings feature a combination of natural stone and glass façades, with subtle architectural details and open balconies. A linear yet dynamic composition with clean geometric volumes, softened by carefully curated landscaping, including hedges, ornamental grasses, and small trees. The façade combines smooth concrete panels with floor-to-ceiling tinted glass windows, creating a refined balance of opacity and transparency. The outdoor space is defined by a wooden pathway meandering through a meticulously designed garden, leading towards a focal point—a polished metal sphere sculpture. Strategic lighting elements subtly highlight the landscape, while the gentle play of reflections on the glass surfaces enhances the depth of the environment. Set in a tranquil urban enclave, free from visual noise, framed by an overcast sky that casts a soft, diffused glow over the buildings. Early morning atmosphere with slight fog in the distance, lending an ethereal and cinematic quality to the scene. RAW photo, slightly elevated wide-angle viewpoint, cinematic framing, balanced symmetry, moderate depth of field, high dynamic range, hyper-detailed, photorealistic rendering.""')
+            prompt_parts.append("Give me a description of this image in the format of a text prompt for AI generative model. It should be ONE string of CLIP-L comma-separated keywords or short phrases. Do not use full sentences.")
+        else: # FLUX
+            prompt_parts.append("Give me a detailed description of this image in the format of a text prompt for AI generative model. Use natural language sentences.")
 
-        # Block 3: Prompt Structure
-        prompt_parts.append("The structure of the prompt should be as follows (do not create headings or comments, only follow the order of information in the description):")
+        # Structure
         if prompt_structure and prompt_structure.strip():
-            prompt_parts.append(prompt_structure)
-        else:
-            default_structure = "1) Type of the building, \n2) Shape of the building, \n3) Building materials, \n4) Location and surroundings, \n5) Season, weather, daytime, lighting, \n6) Camera position and angle, composition, camera parameters"
-            prompt_parts.append(default_structure)
-
-        # Block 4: Ignore
-        if ignore and ignore.strip():
-            prompt_parts.append(f'In the prompt, be sure to ignore any mention of anything related to: {ignore}')
-
-        # Block 5: Emphasis
-        if emphasis and emphasis.strip():
-            prompt_parts.append(f'In the prompt, emphasize additional attention on: {emphasis}')
-
-        # Block 6: Dictionary (Added best effort based on input existence)
+            prompt_parts.append(f"Follow this structure strictly:\n{prompt_structure}")
+        
+        # Dictionary
         if dictionary and dictionary.strip():
-             prompt_parts.append(f'Consider using these words from the dictionary if strictly appropriate for the image: {dictionary}')
-
-        # Block 7: Length
-        if prompt_length and int(prompt_length) > 0:
-            prompt_parts.append(f'The number of words in the prompt should be no more than {prompt_length}')
+            prompt_parts.append(f"Use these words if they apply to the image (do not force them if they don't fit):\n{dictionary}")
+        
+        # Ignore
+        if ignore and ignore.strip():
+            prompt_parts.append(f"Do NOT mention or include the following in the description:\n{ignore}")
+            
+        # Emphasis
+        if emphasis and emphasis.strip():
+            prompt_parts.append(f"Pay special attention to and emphasize these details:\n{emphasis}")
+            
+        # Length
+        if prompt_length > 0:
+            prompt_parts.append(f"The description should be no more than {prompt_length} words.")
 
         final_prompt = "\n\n".join(prompt_parts)
         log.append("Prompt constructed.")
@@ -190,6 +181,21 @@ class GeminiImageCaptioning:
             else:
                 log.append(f"API Error: {response.status_code} - {response.text}")
                 cost_info = f"API Error: {response.status_code}"
+                
+                # Debug: if 404, list available models
+                if response.status_code == 404:
+                    try:
+                        list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+                        log.append(f"Attempting to list available models from {list_url}...")
+                        list_resp = requests.get(list_url)
+                        if list_resp.status_code == 200:
+                            models = list_resp.json().get('models', [])
+                            model_names = [m.get('name') for m in models]
+                            log.append(f"Available models for this key: {', '.join(model_names)}")
+                        else:
+                            log.append(f"Failed to list models: {list_resp.status_code}")
+                    except Exception as list_e:
+                        log.append(f"Error listing models: {list_e}")
 
         except Exception as e:
             log.append(f"Request Exception: {e}")
