@@ -17,7 +17,7 @@ class GeminiImageCaptioning:
             "required": {
                 "IMAGE": ("IMAGE",),
                 "PROMPT TYPE": (["SD1.5 – SDXL", "FLUX"], {"default": "SD1.5 – SDXL"}),
-                "GEMINI MODEL": (["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-exp"], {"default": "gemini-1.5-pro"}),
+                "GEMINI MODEL": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.0-flash", "gemini-3.0-pro"], {"default": "gemini-3.0-flash"}),
                 "API KEY PATH": ("STRING", {"default": "", "multiline": False}),
             },
             "optional": {
@@ -31,10 +31,18 @@ class GeminiImageCaptioning:
             }
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING")
-    RETURN_NAMES = ("CHECK_RESULT PROMPT", "LOG", "CAPTION")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("CHECK_RESULT PROMPT", "LOG", "CAPTION", "COST INFO")
     FUNCTION = "gen_caption"
     CATEGORY = "Gemini"
+
+    # Pricing per 1M tokens (Input, Output)
+    PRICING = {
+        "gemini-2.5-flash": (0.30, 2.50),
+        "gemini-2.5-pro": (1.25, 10.00),
+        "gemini-3.0-flash": (0.50, 3.00),
+        "gemini-3.0-pro": (2.00, 12.00),
+    }
 
     def gen_caption(self, IMAGE, **kwargs):
         # Extract inputs
@@ -63,14 +71,14 @@ class GeminiImageCaptioning:
                 log.append(f"API Key loaded from {api_key_path}")
             except Exception as e:
                 log.append(f"Error reading API key file: {e}")
-                return ("", "\n".join(log), "")
+                return ("", "\n".join(log), "", "Error loading API Key")
         else:
             log.append(f"API Key path invalid or not found: {api_key_path}")
-            return ("", "\n".join(log), "")
+            return ("", "\n".join(log), "", "API Key Missing")
 
         if not api_key:
             log.append("No API Key found.")
-            return ("", "\n".join(log), "")
+            return ("", "\n".join(log), "", "API Key Empty")
 
         # 2. Process Image
         try:
@@ -86,7 +94,7 @@ class GeminiImageCaptioning:
             log.append("Image processed and converted to base64.")
         except Exception as e:
             log.append(f"Error processing image: {e}")
-            return ("", "\n".join(log), "")
+            return ("", "\n".join(log), "", "Image Processing Error")
 
         # 3. Construct Prompt
         prompt_parts = []
@@ -149,6 +157,8 @@ class GeminiImageCaptioning:
         }
 
         generated_text = ""
+        cost_info = "Cost calculation unavailable"
+        
         try:
             log.append(f"Sending request to {url}...")
             response = requests.post(url, headers=headers, json=data)
@@ -158,14 +168,32 @@ class GeminiImageCaptioning:
                 try:
                     generated_text = result['candidates'][0]['content']['parts'][0]['text']
                     log.append("Received successful response from Gemini.")
+                    
+                    # Calculate Cost
+                    usage = result.get('usageMetadata', {})
+                    prompt_tokens = usage.get('promptTokenCount', 0)
+                    # candidatesTokenCount might be missing if response is purely safety blocked, but here we have text
+                    candidates_tokens = usage.get('candidatesTokenCount', 0) 
+                    
+                    price_in, price_out = self.PRICING.get(gemini_model, (0, 0))
+                    
+                    # Cost = (Input Tokens / 1M) * Price In + (Output Tokens / 1M) * Price Out
+                    cost = (prompt_tokens / 1_000_000) * price_in + (candidates_tokens / 1_000_000) * price_out
+                    
+                    cost_info = f"I: {prompt_tokens} toks | O: {candidates_tokens} toks | Cost: ${cost:.6f}"
+                    log.append(f"Cost calculated: {cost_info}")
+                    
                 except (KeyError, IndexError) as e:
                     log.append(f"Error parsing JSON response: {e}")
                     log.append(f"Full response: {result}")
+                    cost_info = "Error parsing usage metadata"
             else:
                 log.append(f"API Error: {response.status_code} - {response.text}")
+                cost_info = f"API Error: {response.status_code}"
 
         except Exception as e:
             log.append(f"Request Exception: {e}")
+            cost_info = f"Request Exception: {e}"
 
         # 5. Save to File
         if save_to_path and save_to_path.strip():
@@ -185,4 +213,4 @@ class GeminiImageCaptioning:
             except Exception as e:
                 log.append(f"Error saving to file: {e}")
 
-        return (final_prompt, "\n".join(log), generated_text)
+        return (final_prompt, "\n".join(log), generated_text, cost_info)

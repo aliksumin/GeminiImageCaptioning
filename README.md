@@ -12,7 +12,11 @@ The node takes an image and various optional parameters to construct a prompt, s
 - **PROMPT TYPE**: Choose the style of the prompt.
     - `SD1.5 – SDXL`: Produces comma-separated keywords suitable for Stable Diffusion 1.5 and SDXL.
     - `FLUX`: Produces a natural language DESCRIPTION suitable for models like FLUX.
-- **GEMINI MODEL**: Select the Google Gemini model to use for image understanding (e.g., `gemini-1.5-flash`, `gemini-1.5-pro`).
+- **GEMINI MODEL**: Select the Google Gemini model to use for image understanding. Supported models include:
+    - `gemini-3.0-flash`
+    - `gemini-3.0-pro`
+    - `gemini-2.5-flash`
+    - `gemini-2.5-pro`
 - **API KEY PATH**: The absolute path to a `.txt` file containing your Google Gemini API key.
 
 ### Optional
@@ -28,6 +32,7 @@ The node takes an image and various optional parameters to construct a prompt, s
 - **CHECK_RESULT PROMPT**: The final text prompt that was sent to Gemini.
 - **LOG**: A log of the process, useful for debugging.
 - **CAPTION**: The generated image description from Gemini.
+- **COST INFO**: Estimated usage and cost for the request based on Google's pricing rates for the selected model.
 
 ## Installation
 
