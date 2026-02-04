@@ -13,8 +13,8 @@ The node takes an image and various optional parameters to construct a prompt, s
     - `SD1.5 – SDXL`: Produces comma-separated keywords suitable for Stable Diffusion 1.5 and SDXL.
     - `FLUX`: Produces a natural language DESCRIPTION suitable for models like FLUX.
 - **GEMINI MODEL**: Select the Google Gemini model to use for image understanding. Supported models include:
-    - `gemini-3.0-flash`
-    - `gemini-3.0-pro`
+    - `gemini-3.0-flash-preview`
+    - `gemini-3.0-pro-preview`
     - `gemini-2.5-flash`
     - `gemini-2.5-pro`
 - **API KEY PATH**: The absolute path to a `.txt` file containing your Google Gemini API key.

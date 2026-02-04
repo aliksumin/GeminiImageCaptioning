@@ -17,7 +17,7 @@ class GeminiImageCaptioning:
             "required": {
                 "IMAGE": ("IMAGE",),
                 "PROMPT TYPE": (["SD1.5 – SDXL", "FLUX"], {"default": "SD1.5 – SDXL"}),
-                "GEMINI MODEL": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.0-flash", "gemini-3.0-pro"], {"default": "gemini-3.0-flash"}),
+                "GEMINI MODEL": (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.0-flash-preview", "gemini-3.0-pro-preview"], {"default": "gemini-3.0-flash-preview"}),
                 "API KEY PATH": ("STRING", {"default": "", "multiline": False}),
             },
             "optional": {
@@ -40,8 +40,8 @@ class GeminiImageCaptioning:
     PRICING = {
         "gemini-2.5-flash": (0.30, 2.50),
         "gemini-2.5-pro": (1.25, 10.00),
-        "gemini-3.0-flash": (0.50, 3.00),
-        "gemini-3.0-pro": (2.00, 12.00),
+        "gemini-3.0-flash-preview": (0.50, 3.00), # Preview pricing
+        "gemini-3.0-pro-preview": (2.00, 12.00),   # Preview pricing
     }
 
     def gen_caption(self, IMAGE, **kwargs):
