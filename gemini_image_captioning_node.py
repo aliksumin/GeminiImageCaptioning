@@ -101,9 +101,9 @@ class GeminiImageCaptioning:
         
         # Base Instruction
         if prompt_type == "SD1.5 – SDXL":
-            prompt_parts.append("Give me a description of this image in the format of a text prompt for AI generative model. It should be ONE string of CLIP-L comma-separated keywords or short phrases. Do not use full sentences.")
+            prompt_parts.append("Give me a description of this image in the format of a text prompt for AI generative model. It should be ONE string of CLIP-L comma-separated keywords or short phrases. Do not use full sentences. Return ONLY the caption. Do not include any introductory text or markdown formatting (no bold '**').")
         else: # FLUX
-            prompt_parts.append("Give me a detailed description of this image in the format of a text prompt for AI generative model. Use natural language sentences.")
+            prompt_parts.append("Give me a detailed description of this image in the format of a text prompt for AI generative model. Use natural language sentences. Return ONLY the caption. Do not include any introductory text or markdown formatting (no bold '**').")
 
         # Structure
         if prompt_structure and prompt_structure.strip():
@@ -159,6 +159,34 @@ class GeminiImageCaptioning:
                 try:
                     generated_text = result['candidates'][0]['content']['parts'][0]['text']
                     log.append("Received successful response from Gemini.")
+                    
+                    # --- Post-Processing Cleaning ---
+                    # Remove markdown bolding
+                    generated_text = generated_text.replace("**", "")
+                    
+                    # Remove common conversational prefixes
+                    clean_text = generated_text.strip()
+                    prefixes_to_remove = [
+                        "Here is a detailed text prompt",
+                        "Here is a description",
+                        "Here is the prompt",
+                        "Based on the image",
+                        "The image shows"
+                    ]
+                    
+                    # Simple check to remove lines that look like intros if they end with a colon
+                    lines = clean_text.split('\n')
+                    if lines and (":" in lines[0] or any(p.lower() in lines[0].lower() for p in prefixes_to_remove)):
+                         # specific check for the user's case: "Here is a detailed text prompt...:"
+                         if "Here is" in lines[0] and lines[0].strip().endswith(":"):
+                             lines = lines[1:]
+                         elif len(lines) > 1 and len(lines[0]) < 100: # heuristic: short first line might be title
+                             # If purely an intro line
+                             if any(p.lower() in lines[0].lower() for p in prefixes_to_remove):
+                                 lines = lines[1:]
+                    
+                    generated_text = "\n".join(lines).strip()
+                    # -------------------------------
                     
                     # Calculate Cost
                     usage = result.get('usageMetadata', {})
