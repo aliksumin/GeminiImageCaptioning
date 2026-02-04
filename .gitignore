@@ -1,0 +1,12 @@
+Template_GeminiCaptioning.docx
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+.env
+.vscode/
+test_node_mock.py
+extracted_text.txt
+dummy_key.txt
+temp_extract/
