@@ -1,4 +1,5 @@
 from .gemini_image_captioning_node import GeminiImageCaptioning
+from .dataset_folder_node import DatasetFolder
 
 NODE_CLASS_MAPPINGS = {
     "GeminiImageCaptioning": GeminiImageCaptioning
