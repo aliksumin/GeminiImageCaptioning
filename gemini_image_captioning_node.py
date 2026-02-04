@@ -108,6 +108,9 @@ class GeminiImageCaptioning:
         # Structure
         if prompt_structure and prompt_structure.strip():
             prompt_parts.append(f"Follow this structure strictly:\n{prompt_structure}")
+        else:
+            default_structure = "1) Type of the building, \n2) Shape of the building, \n3) Building materials, \n4) Location and surroundings, \n5) Season, weather, daytime, lighting, \n6) Camera position and angle, composition, camera parameters"
+            prompt_parts.append(f"Follow this structure strictly:\n{default_structure}")
         
         # Dictionary
         if dictionary and dictionary.strip():
